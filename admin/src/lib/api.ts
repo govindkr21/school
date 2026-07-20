@@ -1,4 +1,32 @@
-const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:4000/api/v1'
+const DEFAULT_API_BASE = 'http://localhost:4000/api/v1'
+
+function getApiBaseUrl() {
+  const configuredBase = (import.meta as any).env?.VITE_API_BASE_URL?.trim() || DEFAULT_API_BASE
+  const baseWithProtocol = /^https?:\/\//i.test(configuredBase)
+    ? configuredBase
+    : `https://${configuredBase}`
+
+  try {
+    const url = new URL(baseWithProtocol)
+    const hostname = url.hostname
+
+    // Protect deployments from an accidentally pasted Railway URL twice, e.g.
+    // "school.up.railway.appschool.up.railway.app/api/v1".
+    for (let half = 1; half <= hostname.length / 2; half += 1) {
+      const firstHalf = hostname.slice(0, half)
+      if (firstHalf.endsWith('.up.railway.app') && firstHalf.repeat(2) === hostname) {
+        url.hostname = firstHalf
+        break
+      }
+    }
+
+    return url.toString().replace(/\/$/, '')
+  } catch {
+    return DEFAULT_API_BASE
+  }
+}
+
+const API_BASE = getApiBaseUrl()
 import { getAdminToken } from './session'
 
 export async function apiPost(path: string, body: unknown) {
