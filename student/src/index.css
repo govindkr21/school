@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+	html, body, #root { height: 100%; }
+
+	body {
+		@apply bg-[#FBF8F0] text-[#14231B] antialiased;
+		font-family: 'Vesper Libre', serif;
+		font-size: 16px;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		text-rendering: optimizeLegibility;
+	}
+
+	h1, h2, h3, h4, h5, h6, .font-black, .font-bold {
+		font-family: 'Vesper Libre', serif;
+		letter-spacing: -0.01em;
+	}
+
+	::selection {
+		background: rgba(19, 68, 48, 0.16);
+		color: #134430;
+	}
+}
+
+@layer components {
+	.card {
+		@apply rounded-2xl border border-[#EAE1CC] bg-white p-6;
+	}
+
+	.soft-input {
+		@apply rounded-[10px] border border-[#DED2B6] bg-white px-4 py-3 text-[#14231B] outline-none transition focus:border-[#1B5E3F];
+	}
+
+	.soft-button {
+		@apply rounded-[10px] border border-[#DED2B6] bg-white px-4 py-3 font-medium text-[#14231B] transition hover:border-[#134430];
+	}
+}
