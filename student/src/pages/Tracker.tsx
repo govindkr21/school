@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Home, LogOut, Search as SearchIcon, ChevronDown, RefreshCw, FileText, MessageSquare, Clock, ShieldCheck, User, Image as ImageIcon, Paperclip } from 'lucide-react'
 import { apiGet } from '../lib/api'
+import BrandLogo from '../components/BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 
@@ -149,7 +150,7 @@ const Tracker: React.FC = () => {
     <div className="min-h-screen bg-[#FBF8F0]">
       <header className="sticky top-0 z-20 border-b border-[#EAE1CC] bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="text-lg" style={heading}>Madnir</div>
+          <BrandLogo className="h-14 w-14" priority />
           <div className="flex gap-2 sm:gap-3">
             <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 rounded-[10px] border border-[#DED2B6] bg-white px-3 py-2.5 text-sm font-medium text-[#14231B] hover:border-[#134430] sm:px-4">
               <Home className="h-4 w-4" />

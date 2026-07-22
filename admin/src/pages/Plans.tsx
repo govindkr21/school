@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { apiPost } from '../lib/api'
 import { setAdminSession } from '../lib/session'
 import RegistrationRail from '../components/RegistrationRail'
+import BrandLogo from '../components/BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 
@@ -101,6 +102,7 @@ const Plans: React.FC = () => {
       />
 
       <div className="p-6 md:p-10 lg:p-14">
+        <BrandLogo className="mb-6 h-20 w-20 lg:hidden" priority />
         <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="font-mono text-xs uppercase tracking-[0.14em] text-[#8B978F]">Step 3 of 3</div>

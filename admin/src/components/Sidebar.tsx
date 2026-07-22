@@ -3,8 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { clearAdminSession, getAdminProfile } from '../lib/session'
 import { apiGet } from '../lib/api'
-
-const heading = { fontFamily: "'Vesper Libre', serif" }
+import BrandLogo from './BrandLogo'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   'flex items-center justify-between rounded-[10px] px-4 py-3 text-[16px] transition ' +
@@ -59,9 +58,13 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
       >
         <div>
           <div className="mb-8 flex items-center justify-between rounded-2xl bg-[#1B5E3F]/55 px-4 py-4">
-            <div>
-              <div className="text-lg" style={heading}>Madnir</div>
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="rounded-xl bg-[#FBF8F0] p-1">
+                <BrandLogo className="h-12 w-12 shrink-0" priority />
+              </div>
+              <div className="min-w-0">
               <div className="mt-1 font-mono text-[12px] text-[#FBF8F0]/50">{profile.orgName || 'District Central'}</div>
+              </div>
             </div>
             <button onClick={onClose} className="rounded-full p-1 text-[#FBF8F0]/70 hover:bg-white/10 md:hidden" aria-label="Close menu">
               <X className="h-5 w-5" />

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { apiPost } from '../lib/api'
 import { setAdminSession } from '../lib/session'
 import DemoModal from '../components/DemoModal'
+import BrandLogo from '../components/BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 const inputClass = 'w-full rounded-[10px] border border-[#DED2B6] bg-white px-4 py-3 text-[16px] text-[#14231B] outline-none transition focus:border-[#1B5E3F]'
@@ -55,12 +56,8 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#FBF8F0] lg:grid lg:grid-cols-2">
       <div className="hidden flex-col justify-between bg-[#134430] p-12 text-[#FBF8F0] lg:flex">
-        <Link to="/" className="inline-flex items-center gap-2">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M12 6.2C10.4 4.9 8.4 4.4 4 4.6v13c4.4-.2 6.4.3 8 1.6 1.6-1.3 3.6-1.8 8-1.6v-13c-4.4-.2-6.4.3-8 1.6Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-            <path d="M12 6.2v12.9" stroke="currentColor" strokeWidth="1.6" />
-          </svg>
-          <span className="text-lg" style={heading}>Madnir</span>
+        <Link to="/" className="inline-flex w-fit rounded-2xl bg-[#FBF8F0] p-2" aria-label="Madnir home">
+          <BrandLogo className="h-24 w-24" priority />
         </Link>
 
         <div>

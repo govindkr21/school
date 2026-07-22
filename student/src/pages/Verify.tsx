@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ShieldCheck, User, Fingerprint, Calendar, ArrowLeft, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
 import { apiPost } from '../lib/api'
+import BrandLogo from '../components/BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 const fieldClass = 'flex items-center gap-3 rounded-[10px] border border-[#DED2B6] bg-[#FBF8F0] p-4 transition-all focus-within:border-[#1B5E3F] focus-within:bg-white'
@@ -26,6 +27,7 @@ const Verify: React.FC = () => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#FBF8F0] p-6">
         <div className="max-w-sm rounded-2xl border border-[#EAE1CC] bg-white p-5 sm:p-8 text-center">
+          <BrandLogo className="mx-auto mb-4 h-20 w-20" priority />
           <AlertCircle className="mx-auto mb-4 h-14 w-14 text-[#A63A2E]" />
           <h2 className="text-2xl" style={heading}>No school selected</h2>
           <p className="mt-2 text-[#5C6B62]">Please select a school first to proceed with verification.</p>
@@ -96,6 +98,7 @@ const Verify: React.FC = () => {
       <div className="flex min-h-screen flex-col items-center justify-center bg-[#FBF8F0] p-6">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
+            <BrandLogo className="mx-auto mb-4 h-24 w-24" priority />
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#134430]">
               <Fingerprint className="h-8 w-8 text-[#FBF8F0]" />
             </div>
@@ -150,6 +153,7 @@ const Verify: React.FC = () => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#FBF8F0] p-6">
       <div className="w-full max-w-xl">
+        <BrandLogo className="mx-auto mb-4 h-24 w-24" priority />
 
         <button
           onClick={() => navigate(-1)}

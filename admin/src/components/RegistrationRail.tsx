@@ -1,4 +1,5 @@
 import React from 'react'
+import BrandLogo from './BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 
@@ -12,6 +13,9 @@ const RegistrationRail: React.FC<{ step: 1 | 2 | 3; title: string[]; description
   return (
     <div className="hidden bg-[#134430] p-12 text-[#FBF8F0] lg:flex lg:flex-col lg:justify-between">
       <div>
+        <div className="mb-10 inline-flex rounded-2xl bg-[#FBF8F0] p-2">
+          <BrandLogo className="h-24 w-24" priority />
+        </div>
         <div className="font-mono text-xs uppercase tracking-[0.14em] text-[#2F7B55]">Registration</div>
         <h1 className="mt-4 text-4xl leading-tight" style={heading}>
           {title.map((line) => (

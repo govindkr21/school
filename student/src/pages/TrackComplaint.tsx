@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, CheckCircle2, Clock, AlertCircle, Home } from 'lucide-react'
 import { apiGet } from '../lib/api'
+import BrandLogo from '../components/BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 
@@ -70,7 +71,7 @@ const TrackComplaint: React.FC = () => {
     <div className="min-h-screen bg-[#FBF8F0]">
       <header className="border-b border-[#EAE1CC] bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="text-lg" style={heading}>Madnir</div>
+          <BrandLogo className="h-14 w-14" priority />
           <Link to="/dashboard" className="flex items-center gap-2 text-sm font-medium text-[#5C6B62] hover:text-[#134430]">
             <Home className="h-4 w-4" />
             Dashboard

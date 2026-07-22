@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { apiPost } from '../lib/api'
 import RegistrationRail from '../components/RegistrationRail'
+import BrandLogo from '../components/BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 const RESEND_COOLDOWN_SECONDS = 30
@@ -71,6 +72,7 @@ const VerifyOtp: React.FC = () => {
 
       <div className="flex items-center justify-center p-6 md:p-10 lg:p-14">
         <div className="w-full max-w-md">
+          <BrandLogo className="mb-6 h-20 w-20 lg:hidden" priority />
           <div className="font-mono text-xs uppercase tracking-[0.14em] text-[#8B978F]">Step 2 of 3</div>
           <h2 className="mt-3 text-3xl" style={heading}>Enter OTP</h2>
           <p className="mt-2 text-[16px] text-[#5C6B62]">Continue to the plan selection once verification succeeds.</p>

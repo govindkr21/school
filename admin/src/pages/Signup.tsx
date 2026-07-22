@@ -4,6 +4,7 @@ import { apiPost } from '../lib/api'
 import { STATES_DISTRICTS } from '../lib/states'
 import { ChevronDown, Search, MapPin } from 'lucide-react'
 import RegistrationRail from '../components/RegistrationRail'
+import BrandLogo from '../components/BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 const inputClass = 'w-full rounded-[10px] border border-[#DED2B6] bg-white px-4 py-3 text-[16px] text-[#14231B] outline-none transition focus:border-[#1B5E3F]'
@@ -85,6 +86,7 @@ const Signup: React.FC = () => {
       />
 
       <div className="p-6 md:p-10 lg:p-14">
+        <BrandLogo className="mb-6 h-20 w-20 lg:hidden" priority />
         <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="font-mono text-xs uppercase tracking-[0.14em] text-[#8B978F]">Step 1 of 3</div>

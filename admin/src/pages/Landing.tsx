@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ShieldCheck, Clock, TrendingUp } from 'lucide-react'
 import DemoModal from '../components/DemoModal'
+import BrandLogo from '../components/BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 
@@ -11,13 +12,6 @@ const sampleCases = [
   { id: 'VL-2026-0181', age: '6 days old', title: 'Bus route 7 arriving late', status: 'Awaiting review', color: '#A9741A', bg: '#FAF0DC' },
   { id: 'VL-2026-0178', age: '9 days old', title: 'Library fine charged twice', status: 'Resolved', color: '#1B5E3F', bg: '#E7F1E9' }
 ]
-
-const LogoMark: React.FC<{ dark?: boolean }> = ({ dark }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-    <path d="M12 6.2C10.4 4.9 8.4 4.4 4 4.6v13c4.4-.2 6.4.3 8 1.6 1.6-1.3 3.6-1.8 8-1.6v-13c-4.4-.2-6.4.3-8 1.6Z" stroke={dark ? '#134430' : '#FBF8F0'} strokeWidth="1.6" strokeLinejoin="round" />
-    <path d="M12 6.2v12.9" stroke={dark ? '#134430' : '#FBF8F0'} strokeWidth="1.6" />
-  </svg>
-)
 
 const Stat: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div>
@@ -49,9 +43,8 @@ const Landing: React.FC = () => {
     <div className="min-h-screen bg-[#FBF8F0] text-[#14231B]" style={{ fontFamily: "'Vesper Libre', serif" }}>
       <header className="sticky top-0 z-30 border-b border-[#EAE1CC] bg-[#FBF8F0]/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-10">
-          <Link to="/" className="flex items-center gap-2">
-            <LogoMark dark />
-            <span className="text-lg" style={heading}>Madnir</span>
+          <Link to="/" className="flex items-center" aria-label="Madnir home">
+            <BrandLogo className="h-14 w-14" priority />
           </Link>
           <nav className="hidden items-center gap-8 text-sm font-medium text-[#5C6B62] md:flex">
             <a href="#examples" className="hover:text-[#134430]">Example cases</a>
@@ -77,6 +70,13 @@ const Landing: React.FC = () => {
         <div className="relative mx-auto grid max-w-7xl gap-12 px-6 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:px-10 lg:py-28">
           <div>
             <div className="font-mono text-xs uppercase tracking-[0.14em] text-[#2F7B55]">Complaint management for schools &amp; colleges</div>
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#FBF8F0]/20 bg-[#FBF8F0]/10 px-4 py-2 font-mono text-xs font-medium uppercase tracking-[0.18em] text-[#D8E6B5] shadow-sm backdrop-blur">
+              <span>Speak</span>
+              <span className="text-[#B9C58C]">•</span>
+              <span>Support</span>
+              <span className="text-[#B9C58C]">•</span>
+              <span>Succeed</span>
+            </div>
             <h1 className="mt-6 text-4xl leading-tight tracking-tight text-[#FBF8F0] sm:text-5xl lg:text-6xl" style={heading}>
               Every complaint gets a number, an owner, and a deadline.
             </h1>
@@ -182,8 +182,9 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      <footer className="mx-auto max-w-7xl px-6 py-10 text-sm text-[#8B978F] lg:px-10">
-        © 2026 Madnir. Private and public sector organisations are both supported.
+      <footer className="mx-auto flex max-w-7xl items-center gap-4 px-6 py-10 text-sm text-[#8B978F] lg:px-10">
+        <BrandLogo className="h-16 w-16 shrink-0" />
+        <span>© 2026 Madnir. Private and public sector organisations are both supported.</span>
       </footer>
 
       <DemoModal isOpen={demoOpen} onClose={() => setDemoOpen(false)} />

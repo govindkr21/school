@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { MapPin, Search, School as SchoolIcon, ArrowRight, Loader2, ChevronDown, CheckCircle2 } from 'lucide-react'
 import { apiGet } from '../lib/api'
 import { STATES_DISTRICTS } from '../lib/states'
+import BrandLogo from '../components/BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 
@@ -103,11 +104,19 @@ const FindSchool: React.FC = () => {
 
         {/* Header */}
         <div className="mb-8 text-center">
+          <BrandLogo className="mx-auto mb-4 h-28 w-28" priority />
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#134430]">
             <MapPin className="h-7 w-7 text-[#FBF8F0]" />
           </div>
           <h1 className="text-3xl" style={heading}>Find your school</h1>
           <p className="mt-2 text-[16px] text-[#5C6B62]">Select your state, district and school to continue</p>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#C9D6A5] bg-[#EDF3DF] px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1B5E3F] shadow-sm sm:text-xs">
+            <span>Speak</span>
+            <span className="text-[#8E9E5C]">•</span>
+            <span>Support</span>
+            <span className="text-[#8E9E5C]">•</span>
+            <span>Succeed</span>
+          </div>
         </div>
 
         {/* Card */}

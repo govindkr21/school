@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Send, Home, Lightbulb, CheckCircle2, Loader2 } from 'lucide-react'
 import { apiPost } from '../lib/api'
+import BrandLogo from '../components/BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 const fieldClass = 'w-full rounded-[10px] border border-[#DED2B6] bg-[#FBF8F0] px-4 py-3 text-[16px] text-[#14231B] outline-none transition focus:border-[#1B5E3F] focus:bg-white'
@@ -56,7 +57,7 @@ const Suggestions: React.FC = () => {
     <div className="min-h-screen bg-[#FBF8F0]">
       <header className="sticky top-0 z-20 border-b border-[#EAE1CC] bg-white">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="text-lg" style={heading}>Madnir</div>
+          <BrandLogo className="h-14 w-14" priority />
           <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 rounded-[10px] border border-[#DED2B6] bg-white px-3 py-2.5 text-sm font-medium text-[#14231B] hover:border-[#134430] sm:px-4">
             <Home className="h-4 w-4" />
             <span className="hidden sm:inline">Back to dashboard</span>

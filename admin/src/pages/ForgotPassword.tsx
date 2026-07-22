@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiPost } from '../lib/api'
+import BrandLogo from '../components/BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 const inputClass = 'w-full rounded-[10px] border border-[#DED2B6] bg-white px-4 py-3 text-[16px] text-[#14231B] outline-none focus:border-[#1B5E3F]'
@@ -100,6 +101,9 @@ const ForgotPassword: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#FBF8F0] lg:grid lg:grid-cols-2">
       <div className="hidden flex-col justify-center bg-[#134430] p-12 text-[#FBF8F0] lg:flex">
+        <div className="mb-10 inline-flex w-fit rounded-2xl bg-[#FBF8F0] p-2">
+          <BrandLogo className="h-24 w-24" priority />
+        </div>
         <div className="font-mono text-xs uppercase tracking-[0.14em] text-[#2F7B55]">Password recovery</div>
         <h1 className="mt-4 text-4xl leading-tight" style={heading}>Get back into your admin account.</h1>
         <p className="mt-5 max-w-md text-[16px] text-[#FBF8F0]/70">
@@ -109,6 +113,7 @@ const ForgotPassword: React.FC = () => {
 
       <div className="flex items-center justify-center p-6 lg:p-12">
         <div className="w-full max-w-md">
+          <BrandLogo className="mb-6 h-20 w-20 lg:hidden" priority />
           {step === 'request' && (
             <>
               <h2 className="text-3xl" style={heading}>Reset password</h2>

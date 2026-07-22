@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LogOut, ChevronRight, Menu, X } from 'lucide-react'
 import { apiGet } from '../lib/api'
+import BrandLogo from '../components/BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 
@@ -104,10 +105,7 @@ const Dashboard: React.FC = () => {
             >
               {mobileNavOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <div>
-              <div className="text-lg" style={heading}>Madnir</div>
-              <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-[#8B978F]">Student</div>
-            </div>
+            <BrandLogo className="h-14 w-14" priority />
           </div>
           <nav className="hidden items-center gap-8 text-[16px] md:flex">
             <span className="border-b-2 border-[#1B5E3F] pb-1 font-medium text-[#1B5E3F]">My complaints</span>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bell, Menu } from 'lucide-react'
 import { getAdminProfile } from '../lib/session'
 import { apiGet } from '../lib/api'
+import BrandLogo from './BrandLogo'
 
 type NotificationItem = {
   complaintId: string
@@ -64,6 +65,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
       <button onClick={onMenuClick} className="shrink-0 rounded-full border border-[#DED2B6] bg-white p-2.5 text-[#5C6B62] md:hidden" aria-label="Open menu">
         <Menu className="h-4 w-4" />
       </button>
+      <BrandLogo className="h-10 w-10 shrink-0 md:hidden" priority />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 rounded-[10px] border border-[#EAE1CC] bg-white px-3 py-2.5 sm:max-w-md sm:px-4">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B978F" strokeWidth="1.6" className="shrink-0"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
