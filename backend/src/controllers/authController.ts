@@ -83,8 +83,7 @@ export async function getAdminMe(req: AuthRequest, res: Response) {
       schoolId: admin.schoolId,
       adminName: admin.name,
       email: admin.email,
-      contactNumber: admin.contactNumber,
-      profilePic: admin.profilePic,
+      contactNumber: school?.contactNumber || '',
       orgName: school?.name || '',
       state: school?.state || '',
       district: school?.district || ''
@@ -92,51 +91,94 @@ export async function getAdminMe(req: AuthRequest, res: Response) {
   })
 }
 
-export async function updateAdminProfile(req: AuthRequest, res: Response) {
+export async function updateOrganizationInfo(req: AuthRequest, res: Response) {
   const adminId = req.user?.adminId
-  const { name, email, contactNumber, profilePic } = req.body
+  const schoolId = req.user?.schoolId
+  const { orgName, state, district, contactNumber, email } = req.body
+
+  if (!adminId || !schoolId) return res.status(401).json({ success: false, message: 'Unauthorized' })
+  if (email !== undefined) return res.status(400).json({ success: false, message: 'Organization email cannot be changed' })
+  if ([orgName, state, district, contactNumber].some((value) => typeof value !== 'string')) {
+    return res.status(400).json({ success: false, message: 'Organization name, state, district, and phone number are required' })
+  }
+
+  const cleanOrgName = orgName.trim()
+  const cleanState = state.trim()
+  const cleanDistrict = district.trim()
+  const cleanContactNumber = contactNumber.trim()
+
+  if (cleanOrgName.length < 2 || cleanOrgName.length > 160) {
+    return res.status(400).json({ success: false, message: 'Organization name must be between 2 and 160 characters' })
+  }
+  if (cleanState.length < 2 || cleanState.length > 100 || cleanDistrict.length < 2 || cleanDistrict.length > 100) {
+    return res.status(400).json({ success: false, message: 'Enter a valid state and district' })
+  }
+  const digitCount = cleanContactNumber.replace(/\D/g, '').length
+  if (digitCount < 7 || digitCount > 15 || !/^[+\d\s().-]+$/.test(cleanContactNumber)) {
+    return res.status(400).json({ success: false, message: 'Enter a valid organization phone number' })
+  }
 
   try {
-    const admin = await Admin.findByIdAndUpdate(
-      adminId,
-      { name, email, contactNumber, profilePic },
-      { new: true }
-    )
+    const admin = await Admin.findOne({ _id: adminId, schoolId }).select('name email schoolId').lean()
     if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' })
 
-    const school = await School.findOne({ schoolId: admin.schoolId })
+    const school = await School.findOneAndUpdate(
+      { schoolId },
+      { $set: { name: cleanOrgName, state: cleanState, district: cleanDistrict, contactNumber: cleanContactNumber } },
+      { new: true, runValidators: true }
+    ).lean()
+    if (!school) return res.status(404).json({ success: false, message: 'Organization not found' })
 
     return res.json({
       success: true,
-      message: 'Profile updated successfully',
+      message: 'Organization information updated successfully',
       data: {
         adminId: admin._id,
         schoolId: admin.schoolId,
         adminName: admin.name,
         email: admin.email,
-        contactNumber: admin.contactNumber,
-        profilePic: admin.profilePic,
-        orgName: school?.name || '',
-        state: school?.state || '',
-        district: school?.district || ''
+        contactNumber: school.contactNumber || '',
+        orgName: school.name,
+        state: school.state,
+        district: school.district
       }
     })
   } catch (error: any) {
-    return res.status(500).json({ success: false, message: error.message })
+    console.error('Organization update failed', error)
+    return res.status(500).json({ success: false, message: 'Unable to update organization information' })
   }
 }
 
 export async function changePassword(req: AuthRequest, res: Response) {
   const adminId = req.user?.adminId
-  const { newPassword } = req.body
+  const { currentPassword, newPassword } = req.body
+
+  if (!adminId) return res.status(401).json({ success: false, message: 'Unauthorized' })
+  if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+    return res.status(400).json({ success: false, message: 'Current password and new password are required' })
+  }
+  if (newPassword.length < 8 || newPassword.length > 72) {
+    return res.status(400).json({ success: false, message: 'New password must be between 8 and 72 characters' })
+  }
+  if (currentPassword === newPassword) {
+    return res.status(400).json({ success: false, message: 'New password must be different from the current password' })
+  }
 
   try {
+    const admin = await Admin.findById(adminId)
+    if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' })
+
+    const currentPasswordMatches = await bcrypt.compare(currentPassword, admin.passwordHash)
+    if (!currentPasswordMatches) return res.status(401).json({ success: false, message: 'Current password is incorrect' })
+
     const passwordHash = await bcrypt.hash(newPassword, 10)
-    await Admin.findByIdAndUpdate(adminId, { passwordHash })
+    admin.passwordHash = passwordHash
+    await admin.save()
 
     return res.json({ success: true, message: 'Password changed successfully' })
   } catch (error: any) {
-    return res.status(500).json({ success: false, message: error.message })
+    console.error('Password change failed', error)
+    return res.status(500).json({ success: false, message: 'Unable to change password' })
   }
 }
 

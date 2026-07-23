@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Menu } from 'lucide-react'
+import { Bell, Check, CheckCheck, Menu } from 'lucide-react'
 import { getAdminProfile } from '../lib/session'
-import { apiGet } from '../lib/api'
+import { apiGet, apiPost } from '../lib/api'
 import BrandLogo from './BrandLogo'
 
 type NotificationItem = {
@@ -10,6 +10,7 @@ type NotificationItem = {
   status: string
   title: string
   createdAt: string
+  isRead: boolean
 }
 
 interface TopbarProps {
@@ -22,43 +23,55 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  const loadNotifications = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true)
+    try {
+      const res = await apiGet('/complaints/admin/notifications')
+      setNotifications((res.data || []) as NotificationItem[])
+      setUnreadCount(Number(res.unreadCount) || 0)
+    } catch {
+      setNotifications([])
+      setUnreadCount(0)
+    } finally {
+      if (showLoading) setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
-    async function loadNotifications() {
-      setLoading(true)
-      try {
-        const res = await apiGet('/complaints/admin')
-        if (!active) return
-        const rows = (res.data || []) as any[]
-        setNotifications(
-          rows
-            .filter((r) => r.status !== 'RESOLVED')
-            .slice(0, 6)
-            .map((r) => ({
-              complaintId: r.complaintId,
-              status: r.status,
-              title: r.title,
-              createdAt: r.createdAt
-            }))
-        )
-      } catch {
-        if (!active) return
-        setNotifications([])
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-
-    loadNotifications()
-    const timer = setInterval(loadNotifications, 30000)
+    if (active) loadNotifications(true)
+    const timer = setInterval(() => { if (active) loadNotifications() }, 30000)
     return () => {
       active = false
       clearInterval(timer)
     }
-  }, [])
+  }, [loadNotifications])
 
-  const unreadCount = useMemo(() => notifications.length, [notifications])
+  async function markAsRead(complaintId: string) {
+    const target = notifications.find((notification) => notification.complaintId === complaintId)
+    if (!target || target.isRead) return
+    await apiPost(`/complaints/admin/notifications/${encodeURIComponent(complaintId)}/read`, {})
+    setNotifications((items) => items.map((item) => item.complaintId === complaintId ? { ...item, isRead: true } : item))
+    setUnreadCount((count) => Math.max(0, count - 1))
+  }
+
+  async function markAllAsRead() {
+    await apiPost('/complaints/admin/notifications/read-all', {})
+    setNotifications((items) => items.map((item) => ({ ...item, isRead: true })))
+    setUnreadCount(0)
+  }
+
+  async function openComplaint(notification: NotificationItem) {
+    try {
+      await markAsRead(notification.complaintId)
+    } catch {
+      // Opening the complaint must still work if the read-state request fails.
+    }
+    setOpen(false)
+    navigate(`/complaints?id=${encodeURIComponent(notification.complaintId)}`)
+  }
 
   return (
     <header className="flex items-center justify-between gap-2 border-b border-[#EAE1CC] bg-[#FBF8F0]/95 px-3 py-3.5 backdrop-blur sm:px-5 md:px-8">
@@ -86,24 +99,42 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
 
           {open && (
             <div className="fixed left-3 right-3 top-16 z-50 max-h-[70vh] overflow-y-auto rounded-2xl border border-[#EAE1CC] bg-white p-3 shadow-[0_20px_50px_rgba(19,68,48,0.14)] sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 sm:max-h-none">
-              <div className="mb-2 text-sm font-semibold text-[#14231B]">Active complaints</div>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div className="text-sm font-semibold text-[#14231B]">Active complaints</div>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={() => markAllAsRead().catch(() => undefined)}
+                    className="flex items-center gap-1 text-xs font-semibold text-[#134430] hover:underline"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" />
+                    Mark all as read
+                  </button>
+                )}
+              </div>
               {loading && <div className="py-4 text-sm text-[#5C6B62]">Loading...</div>}
               {!loading && notifications.length === 0 && <div className="py-4 text-sm text-[#5C6B62]">No active complaints.</div>}
               {!loading && notifications.length > 0 && (
                 <div className="space-y-2">
                   {notifications.map((n) => (
-                    <button
-                      key={n.complaintId}
-                      onClick={() => {
-                        setOpen(false)
-                        navigate('/complaints')
-                      }}
-                      className="w-full rounded-xl border border-[#EAE1CC] p-2 text-left transition hover:bg-[#FBF8F0]"
-                    >
-                      <div className="font-mono text-xs text-[#1B5E3F]">{n.complaintId}</div>
-                      <div className="line-clamp-1 text-sm text-[#14231B]">{n.title}</div>
-                      <div className="font-mono text-[12px] text-[#8B978F]">{n.status}</div>
-                    </button>
+                    <div key={n.complaintId} className={`rounded-xl border p-2 transition ${n.isRead ? 'border-[#EAE1CC] bg-white' : 'border-[#BFE0CC] bg-[#F2F8F4]'}`}>
+                      <button onClick={() => openComplaint(n)} className="w-full text-left">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-mono text-xs text-[#1B5E3F]">{n.complaintId}</div>
+                          {!n.isRead && <span className="h-2 w-2 rounded-full bg-[#A63A2E]" aria-label="Unread" />}
+                        </div>
+                        <div className="line-clamp-1 text-sm text-[#14231B]">{n.title}</div>
+                        <div className="font-mono text-[12px] text-[#8B978F]">{n.status}</div>
+                      </button>
+                      {!n.isRead && (
+                        <button
+                          onClick={() => markAsRead(n.complaintId).catch(() => undefined)}
+                          className="mt-1 flex items-center gap-1 text-xs font-semibold text-[#134430] hover:underline"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          Mark as read
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}

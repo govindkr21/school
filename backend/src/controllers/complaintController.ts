@@ -6,7 +6,8 @@ import Admin from '../models/Admin'
 import Suggestion from '../models/Suggestion'
 import { generateComplaintId } from '../utils/idGenerator'
 import { recordActivity, getTimeline, synthesizeTimelineFromHistory, STATUS_TITLES } from '../services/activityService'
-import { uploadComplaintImage } from '../services/imageUploadService'
+import { deleteComplaintImage, uploadComplaintImage, UploadedImage } from '../services/imageUploadService'
+import AdminNotificationState from '../models/AdminNotificationState'
 
 export async function createComplaint(req: Request, res: Response) {
   const user = (req as any).user
@@ -16,14 +17,14 @@ export async function createComplaint(req: Request, res: Response) {
   if (!title || !description) return res.status(400).json({ success: false, message: 'Missing fields' })
 
   // Ensure student exists
-  const student = await Student.findById(user.studentId)
+  const student = await Student.findById(user.studentId).select('schoolId fullName').lean()
   if (!student) return res.status(404).json({ success: false, message: 'Student not found' })
 
   // RATE LIMITING: Check if student already filed a complaint today
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const complaintToday = await Complaint.findOne({
+  const complaintToday = await Complaint.exists({
     studentId: student._id,
     createdAt: { $gte: today }
   })
@@ -36,7 +37,7 @@ export async function createComplaint(req: Request, res: Response) {
   }
 
   // Get school details to extract name for complaint ID
-  const school = await School.findOne({ schoolId: student.schoolId })
+  const school = await School.findOne({ schoolId: student.schoolId }).select('name').lean()
   if (!school) return res.status(404).json({ success: false, message: 'School not found' })
 
   // Generate complaint ID based on school name (e.g., abc1, abc2)
@@ -45,53 +46,74 @@ export async function createComplaint(req: Request, res: Response) {
   const damageReported = hasPhysicalDamage === 'true' || hasPhysicalDamage === true
   const files = ((req as any).files || []) as Express.Multer.File[]
   let physicalDamage: any = undefined
+  let uploadedImages: UploadedImage[] = []
 
   if (damageReported) {
-    let images: { secureUrl: string; publicId: string }[] = []
-    try {
-      images = await Promise.all(files.map((f) => uploadComplaintImage(f)))
-    } catch (err) {
-      console.error('Damage image upload failed', err)
-      return res.status(502).json({ success: false, message: 'Failed to upload damage images. Please try again.' })
+    const uploadResults = await Promise.allSettled(files.map((file) => uploadComplaintImage(file)))
+    uploadedImages = uploadResults
+      .filter((result): result is PromiseFulfilledResult<UploadedImage> => result.status === 'fulfilled')
+      .map((result) => result.value)
+    const failedUpload = uploadResults.find((result): result is PromiseRejectedResult => result.status === 'rejected')
+
+    if (failedUpload) {
+      await Promise.allSettled(uploadedImages.map((image) => deleteComplaintImage(image)))
+      const status = Number(failedUpload.reason?.status) || 502
+      console.error('Damage image upload failed', failedUpload.reason)
+      return res.status(status).json({
+        success: false,
+        message: status === 503
+          ? failedUpload.reason.message
+          : 'One or more images could not be uploaded. Please verify the image type and try again.'
+      })
     }
     physicalDamage = {
       hasDamage: true,
       description: damageDescription?.trim(),
       estimatedCost: estimatedCost ? Number(estimatedCost) : undefined,
       location: damageLocation?.trim(),
-      images
+      images: uploadedImages
     }
   }
 
   // Create complaint with IN_PROGRESS status and initial status history
-  const complaint = await Complaint.create({
-    complaintId,
-    schoolId: student.schoolId,
-    studentId: student._id,
-    title,
-    description,
-    category,
-    priority,
-    physicalDamage,
-    status: 'IN_PROGRESS',
-    statusHistory: [
-      {
-        status: 'IN_PROGRESS',
-        changedAt: new Date(),
-        changedBy: 'SYSTEM',
-        message: 'Complaint received and registered'
-      }
-    ]
-  })
+  let complaint
+  try {
+    complaint = await Complaint.create({
+      complaintId,
+      schoolId: student.schoolId,
+      studentId: student._id,
+      title,
+      description,
+      category,
+      priority,
+      physicalDamage,
+      status: 'IN_PROGRESS',
+      statusHistory: [
+        {
+          status: 'IN_PROGRESS',
+          changedAt: new Date(),
+          changedBy: 'SYSTEM',
+          message: 'Complaint received and registered'
+        }
+      ]
+    })
+  } catch (error) {
+    await Promise.allSettled(uploadedImages.map((image) => deleteComplaintImage(image)))
+    throw error
+  }
 
-  await recordActivity({
-    complaintId: complaint.complaintId,
-    status: complaint.status,
-    actionTitle: 'Complaint submitted',
-    actionDescription: damageReported ? 'Complaint received and registered, with reported physical damage' : 'Complaint received and registered',
-    performedBy: student.fullName,
-    role: 'SYSTEM'
-  })
+  try {
+    await recordActivity({
+      complaintId: complaint.complaintId,
+      status: complaint.status,
+      actionTitle: 'Complaint submitted',
+      actionDescription: damageReported ? 'Complaint received and registered, with reported physical damage' : 'Complaint received and registered',
+      performedBy: student.fullName,
+      role: 'SYSTEM'
+    })
+  } catch (error) {
+    console.error('Complaint activity recording failed', error)
+  }
 
   return res.json({
     success: true,
@@ -292,17 +314,100 @@ export async function adminListComplaints(req: Request, res: Response) {
   })
 }
 
+export async function getAdminComplaintDetail(req: Request, res: Response) {
+  const admin = (req as any).user
+  const { complaintId } = req.params
+  if (!admin?.schoolId) return res.status(403).json({ success: false, message: 'Forbidden' })
+
+  const complaint = await Complaint.findOne({ complaintId, schoolId: admin.schoolId })
+    .select('complaintId title status description category priority assignedTo physicalDamage createdAt updatedAt resolvedAt statusHistory messages')
+    .populate('studentId', 'fullName admissionNumber')
+  if (!complaint) return res.status(404).json({ success: false, message: 'Complaint not found' })
+
+  let timeline = await getTimeline(complaint.complaintId)
+  if (timeline.length === 0) timeline = synthesizeTimelineFromHistory(complaint) as any
+
+  return res.json({ success: true, data: { ...complaint.toObject(), timeline } })
+}
+
+export async function getAdminNotifications(req: Request, res: Response) {
+  const admin = (req as any).user
+  if (!admin?.adminId || !admin?.schoolId) return res.status(403).json({ success: false, message: 'Forbidden' })
+
+  const [complaints, state] = await Promise.all([
+    Complaint.find({ schoolId: admin.schoolId, status: { $ne: 'RESOLVED' } })
+      .select('complaintId title status createdAt')
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean(),
+    AdminNotificationState.findOne({ adminId: admin.adminId })
+      .select('lastReadAt individuallyRead')
+      .lean()
+  ])
+
+  const lastReadAt = state?.lastReadAt?.getTime() || 0
+  const individuallyRead = new Set(state?.individuallyRead || [])
+  const notifications = complaints.map((complaint) => ({
+    ...complaint,
+    isRead: new Date(complaint.createdAt || 0).getTime() <= lastReadAt || individuallyRead.has(complaint.complaintId)
+  }))
+
+  return res.json({
+    success: true,
+    data: notifications,
+    unreadCount: notifications.filter((notification) => !notification.isRead).length
+  })
+}
+
+export async function markAdminNotificationRead(req: Request, res: Response) {
+  const admin = (req as any).user
+  const { complaintId } = req.params
+  if (!admin?.adminId || !admin?.schoolId) return res.status(403).json({ success: false, message: 'Forbidden' })
+
+  const belongsToSchool = await Complaint.exists({ complaintId, schoolId: admin.schoolId })
+  if (!belongsToSchool) return res.status(404).json({ success: false, message: 'Complaint not found' })
+
+  await AdminNotificationState.updateOne(
+    { adminId: admin.adminId },
+    {
+      $setOnInsert: { adminId: admin.adminId, schoolId: admin.schoolId },
+      // Keep the per-admin document bounded even if an admin never uses
+      // "mark all". Duplicate entries are harmless when read into a Set.
+      $push: { individuallyRead: { $each: [complaintId], $slice: -200 } }
+    },
+    { upsert: true }
+  )
+
+  return res.json({ success: true, message: 'Notification marked as read' })
+}
+
+export async function markAllAdminNotificationsRead(req: Request, res: Response) {
+  const admin = (req as any).user
+  if (!admin?.adminId || !admin?.schoolId) return res.status(403).json({ success: false, message: 'Forbidden' })
+
+  await AdminNotificationState.updateOne(
+    { adminId: admin.adminId },
+    {
+      $set: { schoolId: admin.schoolId, lastReadAt: new Date(), individuallyRead: [] },
+      $setOnInsert: { adminId: admin.adminId }
+    },
+    { upsert: true }
+  )
+
+  return res.json({ success: true, message: 'All notifications marked as read' })
+}
+
 export async function updateComplaintStatus(req: Request, res: Response) {
   const admin = (req as any).user
   const { complaintId } = req.params
   const { status, message, actionTitle, actionDescription, attachmentUrl, imageUrl, assignedTo } = req.body
   if (!admin?.schoolId) return res.status(403).json({ success: false, message: 'Forbidden' })
   if (!complaintId || !status) return res.status(400).json({ success: false, message: 'Missing fields' })
+  if (!['PENDING', 'IN_PROGRESS', 'RESOLVED'].includes(status)) return res.status(400).json({ success: false, message: 'Invalid complaint status' })
   if (message && message.length > 200) return res.status(400).json({ success: false, message: 'Message exceeds 200 characters' })
 
-  const complaint = await Complaint.findOne({ complaintId })
+  const complaint = await Complaint.findOne({ complaintId, schoolId: admin.schoolId })
   if (!complaint) return res.status(404).json({ success: false, message: 'Complaint not found' })
-  if (complaint.schoolId !== admin.schoolId) return res.status(403).json({ success: false, message: 'Forbidden' })
 
   complaint.status = status
 
@@ -328,7 +433,7 @@ export async function updateComplaintStatus(req: Request, res: Response) {
   // Add message if provided
   if (message && message.trim()) {
     complaint.messages = complaint.messages || []
-    complaint.messages.push({ sender: 'ADMIN', senderId: admin._id, message: message.trim(), createdAt: new Date() } as any)
+    complaint.messages.push({ sender: 'ADMIN', senderId: admin.adminId, message: message.trim(), createdAt: new Date() } as any)
   }
 
   await complaint.save()

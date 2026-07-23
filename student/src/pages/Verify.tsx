@@ -1,11 +1,17 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ShieldCheck, User, Fingerprint, Calendar, ArrowLeft, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
+import { ShieldCheck, User, Fingerprint, Calendar, ArrowLeft, ArrowRight, Loader2, AlertCircle, Calculator, RefreshCw } from 'lucide-react'
 import { apiPost } from '../lib/api'
 import BrandLogo from '../components/BrandLogo'
 
 const heading = { fontFamily: "'Vesper Libre', serif" }
 const fieldClass = 'flex items-center gap-3 rounded-[10px] border border-[#DED2B6] bg-[#FBF8F0] p-4 transition-all focus-within:border-[#1B5E3F] focus-within:bg-white'
+
+type CaptchaChallenge = {
+  prompt: string
+  token: string
+  expiresInSeconds: number
+}
 
 const Verify: React.FC = () => {
   const navigate = useNavigate()
@@ -16,9 +22,9 @@ const Verify: React.FC = () => {
   const [admissionNumber, setAdmissionNumber] = useState('')
   const [dob, setDob] = useState('')
 
-  const [showOtpScreen, setShowOtpScreen] = useState(false)
-  const [otp, setOtp] = useState('')
-  const [last4, setLast4] = useState('')
+  const [showCaptchaScreen, setShowCaptchaScreen] = useState(false)
+  const [captcha, setCaptcha] = useState<CaptchaChallenge | null>(null)
+  const [captchaAnswer, setCaptchaAnswer] = useState('')
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -42,8 +48,7 @@ const Verify: React.FC = () => {
     )
   }
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const requestCaptcha = async () => {
     setLoading(true)
     setError(null)
 
@@ -55,9 +60,10 @@ const Verify: React.FC = () => {
         dob
       })
 
-      if (res.success && res.data.requiresOTP) {
-        setLast4(res.data.last4)
-        setShowOtpScreen(true)
+      if (res.success && res.data.requiresCaptcha && res.data.captcha) {
+        setCaptcha(res.data.captcha)
+        setCaptchaAnswer('')
+        setShowCaptchaScreen(true)
       }
     } catch (err: any) {
       setError(err.message || 'Verification failed. Please check your details.')
@@ -66,16 +72,21 @@ const Verify: React.FC = () => {
     }
   }
 
-  const handleOtpSubmit = async (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault()
+    await requestCaptcha()
+  }
+
+  const handleCaptchaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!captcha) return
     setLoading(true)
     setError(null)
 
     try {
-      const res = await apiPost('/students/verify-otp', {
-        schoolId: selectedSchool.schoolId,
-        admissionNumber,
-        otp
+      const res = await apiPost('/students/verify-captcha', {
+        captchaToken: captcha.token,
+        answer: captchaAnswer
       })
 
       if (res.success) {
@@ -87,27 +98,27 @@ const Verify: React.FC = () => {
         navigate('/dashboard')
       }
     } catch (err: any) {
-      setError(err.message || 'Invalid OTP. Please try again.')
+      setError(err.message || 'Unable to verify the math challenge. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  if (showOtpScreen) {
+  if (showCaptchaScreen && captcha) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[#FBF8F0] p-6">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
             <BrandLogo className="mx-auto mb-4 h-24 w-24" priority />
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#134430]">
-              <Fingerprint className="h-8 w-8 text-[#FBF8F0]" />
+              <Calculator className="h-8 w-8 text-[#FBF8F0]" />
             </div>
-            <h1 className="text-3xl" style={heading}>Enter OTP</h1>
-            <p className="mt-2 text-[16px] text-[#5C6B62]">Sent to number ending in <b>{last4}</b></p>
+            <h1 className="text-3xl" style={heading}>Quick math check</h1>
+            <p className="mt-2 text-[16px] text-[#5C6B62]">Solve the question below to securely sign in.</p>
           </div>
 
           <div className="rounded-2xl border border-[#EAE1CC] bg-white p-5 sm:p-8">
-            <form onSubmit={handleOtpSubmit} className="space-y-6">
+            <form onSubmit={handleCaptchaSubmit} className="space-y-6">
               {error && (
                 <div className="flex items-center gap-3 rounded-[10px] border border-[#F8E8E5] bg-[#F8E8E5] p-4 text-[#A63A2E]">
                   <AlertCircle className="h-5 w-5 shrink-0" />
@@ -116,15 +127,20 @@ const Verify: React.FC = () => {
               )}
 
               <div>
-                <label className="mb-2 block text-center font-mono text-xs text-[#5C6B62]">6-digit verification code</label>
+                <div className="mb-4 rounded-2xl border border-[#C9D6A5] bg-[#EDF3DF] px-5 py-6 text-center">
+                  <div className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-[#5C6B62]">Solve this question</div>
+                  <div className="mt-3 text-3xl font-semibold text-[#134430]" aria-live="polite">{captcha.prompt}</div>
+                </div>
+                <label className="mb-2 block text-center font-mono text-xs text-[#5C6B62]">Your answer</label>
                 <input
-                  type="text"
+                  type="number"
+                  inputMode="numeric"
                   required
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  placeholder="000000"
-                  className="w-full rounded-[10px] border border-[#DED2B6] bg-[#FBF8F0] p-5 text-center text-2xl tracking-[0.5em] outline-none transition-all focus:border-[#1B5E3F] focus:bg-white"
+                  autoFocus
+                  value={captchaAnswer}
+                  onChange={(e) => setCaptchaAnswer(e.target.value)}
+                  placeholder="Enter answer"
+                  className="w-full rounded-[10px] border border-[#DED2B6] bg-[#FBF8F0] p-5 text-center text-2xl outline-none transition-all focus:border-[#1B5E3F] focus:bg-white"
                 />
               </div>
 
@@ -138,10 +154,24 @@ const Verify: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => setShowOtpScreen(false)}
+                onClick={requestCaptcha}
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2 text-sm font-medium text-[#1B5E3F] transition-colors hover:text-[#134430] disabled:opacity-50"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Get a new question
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCaptchaScreen(false)
+                  setCaptcha(null)
+                  setCaptchaAnswer('')
+                  setError(null)
+                }}
                 className="w-full text-sm text-[#5C6B62] transition-colors hover:text-[#134430]"
               >
-                Change details
+                Change student details
               </button>
             </form>
           </div>

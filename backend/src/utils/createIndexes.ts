@@ -12,6 +12,7 @@ import Complaint from '../models/Complaint'
 import Student from '../models/Student'
 import Admin from '../models/Admin'
 import School from '../models/School'
+import AdminNotificationState from '../models/AdminNotificationState'
 
 dotenv.config()
 
@@ -74,6 +75,13 @@ async function createIndexes() {
     
     await Complaint.collection.createIndex({ status: 1 })
     console.log('  ✓ status index')
+
+    // ============ ADMIN NOTIFICATION STATE INDEXES ============
+    console.log('\n🔔 Admin Notification State:')
+    await AdminNotificationState.collection.createIndex({ adminId: 1 }, { unique: true })
+    console.log('  ✓ adminId unique index')
+    await AdminNotificationState.collection.createIndex({ schoolId: 1 })
+    console.log('  ✓ schoolId index')
     
     // ============ SCHOOL MODEL INDEXES ============
     console.log('\n🏫 School Model:')

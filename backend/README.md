@@ -18,6 +18,7 @@ APIs available under `/api/v1`
 - `POST /api/v1/students/upload/confirm` (admin)
 - `POST /api/v1/students/add` (admin)
 - `POST /api/v1/students/verify` (student verification)
+- `POST /api/v1/students/verify-captcha` (student CAPTCHA confirmation + login)
 - `POST /api/v1/complaints` (student token)
 - `GET /api/v1/complaints/track/:complaintId` (public)
 - `GET /api/v1/complaints/admin` (admin)
@@ -36,6 +37,21 @@ attempts and 5 resends (30s cooldown between sends). Delivered via SendGrid when
 - `POST /api/v1/auth/admin/forgot-password` `{ email }` — always returns success (does not leak whether the email is registered); emails an OTP if it is.
 - `POST /api/v1/auth/admin/forgot-password/verify-otp` `{ email, otp }` — verifies the reset OTP and returns a `resetToken` (JWT, 10 min TTL).
 - `POST /api/v1/auth/admin/forgot-password/reset` `{ resetToken, newPassword }` — sets the new password.
+
+### Student math CAPTCHA login
+
+Student login does not send a mobile OTP. `POST /api/v1/students/verify` first
+matches `schoolId`, `fullName`, `admissionNumber`, and `dob`, then returns a
+five-minute math challenge in `data.captcha` with `{ prompt, token,
+expiresInSeconds }`. The opaque token is AES-256-GCM encrypted and contains the
+verified student identity and expected answer, so CAPTCHA issuance needs no
+extra MongoDB record or write.
+
+Submit `{ captchaToken, answer }` to `POST /api/v1/students/verify-captcha`.
+A correct answer returns the student JWT.
+Incorrect and expired challenges return 401 and 410 respectively. Only failed
+verification requests count toward the student-specific rate limit, so many
+valid students behind the same school network are not blocked.
 
 ### Razorpay (school subscription payments)
 
@@ -99,13 +115,15 @@ damageDescription, estimatedCost, damageLocation`. Up to 5 images under the
 `images` field (JPG/PNG/WEBP, 5MB max each).
 
 Only `secureUrl` + `publicId` are ever stored in Mongo — never the raw image
-bytes. Uploads go to Cloudinary when `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`,
-and `CLOUDINARY_API_SECRET` are set; otherwise they're saved to this server's
-own `uploads/complaints/` folder and served back from `PUBLIC_BASE_URL/uploads/...`
-so the feature works end-to-end before you have Cloudinary credentials.
+bytes. In production, uploads stream from memory to Cloudinary when
+`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` are
+set. All three variables are required in production; local-disk storage is a
+development-only fallback. JPG, PNG, WEBP, HEIC, and HEIF are accepted, up to
+5 files and 5MB per file.
 
 Notes:
 - Set `JWT_SECRET` in `.env` for production
+- Optionally set a separate `CAPTCHA_SECRET`; otherwise student CAPTCHA encryption derives from `JWT_SECRET`
 - Set `SENDGRID_API_KEY`, `SENDGRID_FROM`, `SUPPORT_EMAIL`, `BRAND_NAME` to send real OTP emails
 - Set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` to accept real subscription payments
 - Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` to store damage photos in Cloudinary instead of local disk

@@ -4,7 +4,7 @@ import {
   registerAdmin,
   loginAdmin,
   getAdminMe,
-  updateAdminProfile,
+  updateOrganizationInfo,
   changePassword,
   requestSuspension,
   requestPasswordReset,
@@ -25,11 +25,20 @@ const otpLimiter = rateLimit({
   message: { success: false, message: 'Too many requests. Please try again later.' }
 })
 
+const passwordChangeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many password attempts. Please try again later.' }
+})
+
 router.post('/admin/register', registerAdmin)
 router.post('/admin/login', loginAdmin)
 router.get('/admin/me', adminAuth, getAdminMe)
-router.put('/admin/profile', adminAuth, updateAdminProfile)
-router.post('/admin/change-password', adminAuth, changePassword)
+router.put('/admin/organization', adminAuth, updateOrganizationInfo)
+router.post('/admin/change-password', adminAuth, passwordChangeLimiter, changePassword)
 router.post('/admin/request-suspension', adminAuth, requestSuspension)
 
 // registration flow

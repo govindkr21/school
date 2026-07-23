@@ -8,7 +8,7 @@ const CATEGORIES = ['Academic', 'Infrastructure', 'Transport', 'Canteen', 'Admin
 const MAX_LENGTH = 1000
 const MAX_IMAGES = 5
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
 
 const NewComplaint: React.FC = () => {
   const navigate = useNavigate()
@@ -52,7 +52,7 @@ const NewComplaint: React.FC = () => {
     const accepted: File[] = []
     for (const file of incoming) {
       if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-        setImageError('Only JPG, PNG, and WEBP images are allowed')
+        setImageError('Only JPG, PNG, WEBP, HEIC, and HEIF images are allowed')
         continue
       }
       if (file.size > MAX_IMAGE_SIZE_BYTES) {

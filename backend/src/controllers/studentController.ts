@@ -5,7 +5,7 @@ import path from 'path'
 import jwt from 'jsonwebtoken'
 import Student from '../models/Student'
 import School from '../models/School'
-import OTP from '../models/OTP'
+import { issueMathCaptcha, verifyMathCaptcha } from '../services/mathCaptchaService'
 import { parseWorkbook } from '../services/workbookParser'
 import { suggestColumnMapping } from '../services/llmColumnMapper'
 import { createImportSession, getImportSession, deleteImportSession } from '../services/importSessionStore'
@@ -207,42 +207,44 @@ export async function verifyStudent(req: Request, res: Response) {
   const dobMatch = new Date(student.dob).toISOString().slice(0, 10) === new Date(dob).toISOString().slice(0, 10)
   if (!nameMatch || !dobMatch) return res.status(401).json({ success: false, message: 'Verification failed' })
 
-  // 1. GENERATE OTP
-  // DEVELOPMENT PHASE: Set to 123456 as requested
-  const otpCode = '123456'
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
-
-  // 2. Save OTP for verification
-  await OTP.findOneAndUpdate(
-    { schoolId, admissionNumber },
-    { otp: otpCode, expiresAt },
-    { upsert: true }
-  )
-
-  // 3. LOGIC: Send to student.contactNumber (Simulated for console)
-  console.log(`[SECURITY] OTP ${otpCode} sent to ${student.contactNumber} for ${student.fullName}`)
+  const captcha = issueMathCaptcha({
+    studentId: student._id.toString(),
+    schoolId: student.schoolId,
+    admissionNumber: student.admissionNumber
+  })
 
   return res.json({ 
     success: true, 
-    message: 'OTP sent to your registered mobile number', 
+    message: 'Student details verified. Complete the math challenge to sign in.',
     data: { 
-      requiresOTP: true,
-      last4: student.contactNumber?.slice(-4) || 'XXXX'
+      requiresCaptcha: true,
+      captcha
     } 
   })
 }
 
-export async function confirmOTPAndLogin(req: Request, res: Response) {
-  const { schoolId, admissionNumber, otp } = req.body
-  if (!schoolId || !admissionNumber || !otp) return res.status(400).json({ success: false, message: 'Missing fields' })
+export async function confirmCaptchaAndLogin(req: Request, res: Response) {
+  const { captchaToken, answer } = req.body
+  if (!captchaToken || answer === undefined || answer === null) {
+    return res.status(400).json({ success: false, message: 'CAPTCHA token and answer are required' })
+  }
 
-  const validOtp = await OTP.findOne({ schoolId, admissionNumber, otp })
-  if (!validOtp) return res.status(401).json({ success: false, message: 'Invalid or expired OTP' })
+  const result = verifyMathCaptcha(String(captchaToken), answer)
+  if (!result.ok) {
+    if (result.reason === 'EXPIRED') {
+      return res.status(410).json({ success: false, message: 'Math challenge expired. Please request a new one.' })
+    }
+    if (result.reason === 'WRONG_ANSWER') {
+      return res.status(401).json({ success: false, message: 'Incorrect answer. Please try again.' })
+    }
+    return res.status(401).json({ success: false, message: 'Invalid math challenge. Please request a new one.' })
+  }
 
-  // Delete OTP after use
-  await OTP.deleteOne({ _id: validOtp._id })
-
-  const student = await Student.findOne({ schoolId, admissionNumber })
+  const student = await Student.findOne({
+    _id: result.identity.studentId,
+    schoolId: result.identity.schoolId,
+    admissionNumber: result.identity.admissionNumber
+  })
   if (!student) return res.status(404).json({ success: false, message: 'Student not found' })
 
   const secret = process.env.JWT_SECRET || 'replace_me'
@@ -251,7 +253,7 @@ export async function confirmOTPAndLogin(req: Request, res: Response) {
 
   return res.json({ 
     success: true, 
-    message: 'Verified', 
+    message: 'Verified',
     data: { 
       token, 
       studentId: student._id,

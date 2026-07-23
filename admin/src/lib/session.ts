@@ -4,6 +4,9 @@ export type AdminProfile = {
   email?: string
   orgName?: string
   adminName?: string
+  contactNumber?: string
+  state?: string
+  district?: string
 }
 
 export function getAdminToken() {

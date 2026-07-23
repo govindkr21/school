@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { apiGet, apiPatch } from '../lib/api'
-import { MessageSquare, FileText, AlertCircle, CheckCircle2, Clock, RefreshCw, Pencil, User, IdCard, Folder, Zap, Wrench, Image as ImageIcon, Paperclip, ShieldCheck, TriangleAlert } from 'lucide-react'
+import { MessageSquare, FileText, AlertCircle, CheckCircle2, Clock, RefreshCw, Pencil, User, IdCard, Folder, Zap, Wrench, Image as ImageIcon, Paperclip, ShieldCheck, TriangleAlert, X, Eye } from 'lucide-react'
 
 interface Message {
   sender: 'ADMIN' | 'STUDENT'
@@ -82,7 +82,7 @@ const Complaints: React.FC = () => {
   async function fetchComplaintDetail(complaintId: string) {
     setDetailLoading(true)
     try {
-      const res = await apiGet(`/complaints/track/${complaintId}`)
+      const res = await apiGet(`/complaints/admin/${encodeURIComponent(complaintId)}`)
       if (res.success) {
         setExpandedDetail(res.data)
       }
@@ -131,6 +131,20 @@ const Complaints: React.FC = () => {
     setMsgDraft('')
     setActionTitleDraft('')
     setAssignedToDraft(c.assignedTo || '')
+  }
+
+  function closeComplaintDetail() {
+    setExpandedId(null)
+    setExpandedDetail(null)
+    setEditingId(null)
+    if (targetComplaintId) setSearchParams({}, { replace: true })
+  }
+
+  function editFromDetail(c: ComplaintRow) {
+    startEdit(c)
+    window.setTimeout(() => {
+      document.getElementById(`edit-${c.complaintId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 0)
   }
 
   async function saveEdit(complaintId: string) {
@@ -283,13 +297,22 @@ const Complaints: React.FC = () => {
                         <div className="text-xs font-bold text-gray-500 sm:mb-1">
                           {new Date(complaint.createdAt).toLocaleDateString()}
                         </div>
-                        <button
-                          onClick={() => startEdit(complaint)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E7F1E9] hover:bg-[#D5E8DA] text-[#134430] rounded-lg font-bold text-xs transition-all"
-                        >
-                          <Pencil className="h-3 w-3" />
-                          Update
-                        </button>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <button
+                            onClick={() => handleSelectExpand(complaint)}
+                            className="flex items-center gap-1.5 rounded-lg border border-[#BFE0CC] bg-white px-3 py-1.5 text-xs font-bold text-[#134430] transition-all hover:bg-[#F2F8F4]"
+                          >
+                            <Eye className="h-3 w-3" />
+                            {expandedId === complaint._id ? 'Hide details' : 'View complete complaint'}
+                          </button>
+                          <button
+                            onClick={() => startEdit(complaint)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E7F1E9] hover:bg-[#D5E8DA] text-[#134430] rounded-lg font-bold text-xs transition-all"
+                          >
+                            <Pencil className="h-3 w-3" />
+                            Update
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -330,7 +353,7 @@ const Complaints: React.FC = () => {
                   </div>
 
                   {editingId === complaint.complaintId && (
-                    <div className="mt-6 p-4 sm:p-6 bg-[#E7F1E9] rounded-2xl border-2 border-[#BFE0CC]">
+                    <div id={`edit-${complaint.complaintId}`} className="mt-6 p-4 sm:p-6 bg-[#E7F1E9] rounded-2xl border-2 border-[#BFE0CC]">
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-bold text-gray-700 mb-2">Update Status</label>
@@ -553,15 +576,32 @@ const Complaints: React.FC = () => {
                         )}
                       </div>
 
-                      {/* Refresh Button */}
-                      <button
-                        onClick={() => fetchComplaintDetail(complaint.complaintId)}
-                        disabled={detailLoading}
-                        className="w-full py-3 bg-[#134430] hover:bg-[#0F3626] text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        <RefreshCw className={`w-5 h-5 ${detailLoading ? 'animate-spin' : ''}`} />
-                        {detailLoading ? 'Refreshing...' : 'Refresh Messages'}
-                      </button>
+                      <div className="flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                        <button
+                          onClick={closeComplaintDetail}
+                          className="flex items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-5 py-3 font-bold text-gray-700 transition hover:bg-gray-100"
+                        >
+                          <X className="h-4 w-4" />
+                          Close
+                        </button>
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                          <button
+                            onClick={() => fetchComplaintDetail(complaint.complaintId)}
+                            disabled={detailLoading}
+                            className="flex items-center justify-center gap-2 rounded-xl border-2 border-[#BFE0CC] bg-white px-5 py-3 font-bold text-[#134430] transition hover:bg-[#E7F1E9] disabled:opacity-50"
+                          >
+                            <RefreshCw className={`h-4 w-4 ${detailLoading ? 'animate-spin' : ''}`} />
+                            {detailLoading ? 'Refreshing...' : 'Refresh details'}
+                          </button>
+                          <button
+                            onClick={() => editFromDetail(complaint)}
+                            className="flex items-center justify-center gap-2 rounded-xl bg-[#134430] px-6 py-3 font-bold text-white transition hover:bg-[#0F3626]"
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Update complaint
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
