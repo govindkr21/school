@@ -13,6 +13,7 @@ import Student from '../models/Student'
 import Admin from '../models/Admin'
 import School from '../models/School'
 import AdminNotificationState from '../models/AdminNotificationState'
+import BillingRecord from '../models/BillingRecord'
 
 dotenv.config()
 
@@ -82,6 +83,15 @@ async function createIndexes() {
     console.log('  ✓ adminId unique index')
     await AdminNotificationState.collection.createIndex({ schoolId: 1 })
     console.log('  ✓ schoolId index')
+
+    // ============ BILLING RECORD INDEXES ============
+    console.log('\n💳 Billing Records:')
+    await BillingRecord.collection.createIndex({ schoolId: 1, paidAt: -1 })
+    console.log('  ✓ (schoolId, paidAt desc) index')
+    await BillingRecord.collection.createIndex({ providerOrderId: 1 }, { unique: true })
+    console.log('  ✓ providerOrderId unique index')
+    await BillingRecord.collection.createIndex({ invoiceNumber: 1 }, { unique: true })
+    console.log('  ✓ invoiceNumber unique index')
     
     // ============ SCHOOL MODEL INDEXES ============
     console.log('\n🏫 School Model:')

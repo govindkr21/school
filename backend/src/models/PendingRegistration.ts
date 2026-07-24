@@ -15,6 +15,8 @@ const PendingRegistrationSchema = new mongoose.Schema({
   otpVerified: { type: Boolean, default: false },
   planId: { type: String },
   razorpayOrderId: { type: String },
+  razorpayPaymentId: { type: String },
+  paidAt: { type: Date },
   paymentStatus: { type: String, enum: ['PENDING','PAID','FAILED'], default: 'PENDING' },
   createdAt: { type: Date, default: Date.now }
 })
